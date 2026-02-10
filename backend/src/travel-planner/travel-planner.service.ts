@@ -11,35 +11,60 @@ export class TravelPlannerService {
     private readonly placesService: PlacesService,
   ) {}
 
-  async buildPlanner() {
-    const climate = await this.weatherService.getCuritibaJuneWeatherReal();
-    const train = this.trainService.checkJuneTrainAvailability();
+  async buildPlanner({
+    city,
+    stationId,
+    startDate,
+    endDate,
+  }: {
+    city: string;
+    stationId: string;
+    startDate: string;
+    endDate: string;
+  }) {
+    // 1️⃣ Busca dados climáticos reais (GENÉRICO)
+    const weatherData = await this.weatherService.getWeatherByPeriod({
+      stationId,
+      startDate,
+      endDate,
+    });
 
-    const days = [
-      '2024-06-13',
-      '2024-06-14',
-      '2024-06-15',
-      '2024-06-16',
-      '2024-06-17',
-      '2024-06-18',
-    ];
+    // 2️⃣ Cálculos básicos
+    const avgTemp =
+      weatherData.reduce((sum, day) => sum + day.tavg, 0) /
+      weatherData.length;
 
-    const goodWeather = climate.risco_climatico === 'baixo';
+    const rainyDays = weatherData.filter(
+      (day) => day.prcp && day.prcp > 0,
+    ).length;
 
-    const plannerDays = days.map((date) => ({
-      data: date,
-      clima: goodWeather ? 'bom' : 'instável',
-      sugestoes: goodWeather
-        ? this.placesService.getOutdoorPlaces()
-        : this.placesService.getIndoorPlaces(),
+    // 3️⃣ Classificação de risco climático
+    let climateRisk = 'baixo';
+    if (rainyDays >= 3) climateRisk = 'alto';
+    else if (rainyDays > 0) climateRisk = 'médio';
+
+    // 4️⃣ Montagem dos dias com sugestões
+    const days = weatherData.map((day) => ({
+      data: day.date,
+      clima: day.prcp && day.prcp > 0 ? 'instável' : 'bom',
+      sugestoes:
+        climateRisk === 'baixo'
+          ? this.placesService.getOutdoorPlaces()
+          : this.placesService.getIndoorPlaces(),
     }));
 
+    // 5️⃣ Trem turístico (regra simples por enquanto)
+    const train = this.trainService.checkJuneTrainAvailability();
+
+    // 6️⃣ Resposta final do planner
     return {
-      cidade: 'Curitiba',
-      periodo: '13–18 de junho',
-      clima: climate,
+      cidade: city,
+      periodo: `${startDate} → ${endDate}`,
+      temperatura_media: `${avgTemp.toFixed(1)}°C`,
+      dias_com_chuva: rainyDays,
+      risco_climatico: climateRisk,
       trem_turistico: train,
-      dias: plannerDays,
+      dias: days,
     };
   }
 }

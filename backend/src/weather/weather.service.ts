@@ -103,5 +103,33 @@ export class WeatherService {
             recomendação: recommendation,
         };
     }
+    async getWeatherByPeriod({
+        stationId,
+        startDate,
+        endDate,
+    }: {
+        stationId: string;
+        startDate: string;
+        endDate: string;
+    }) {
+        const response = await firstValueFrom(
+            this.httpService.get(
+                'https://meteostat.p.rapidapi.com/stations/daily',
+                {
+                    params: {
+                        station: stationId,
+                        start: startDate,
+                        end: endDate,
+                    },
+                    headers: {
+                        'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+                        'x-rapidapi-host': 'meteostat.p.rapidapi.com',
+                    },
+                },
+            ),
+        );
+
+        return response.data.data;
+    }
 
 }
