@@ -15,5 +15,10 @@ export class WeatherController {
         return this.weatherService.getCuritibaJunePeriodWeather();
     }
 
+    @Get('curitiba/june/real')
+    getCuritibaJuneWeatherReal() {
+        return this.weatherService.getCuritibaJuneWeatherReal();
+    }
+
 
 }
