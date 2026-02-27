@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  trips     Trip[]
+  createdAt DateTime @default(now())
+}
+
+model Trip {
+  id        Int      @id @default(autoincrement())
+  title     String
+  destination String
+  startDate DateTime
+  endDate   DateTime
+  budget    Float?
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  expenses  Expense[]
+  createdAt DateTime @default(now())
+}
+
+model Expense {
+  id        Int      @id @default(autoincrement())
+  description String
+  amount    Float
+  category  String
+  date      DateTime
+  tripId    Int
+  trip      Trip     @relation(fields: [tripId], references: [id])
+}
