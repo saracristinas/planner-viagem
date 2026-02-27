@@ -6,6 +6,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { WeatherModule } from './weather/weather.module';
 import { TrainModule } from './train/train.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { TripModule } from './trip/trip.module';
+import { ExpenseModule } from './expense/expense.module';
+
 
 @Module({
   imports: [
@@ -13,7 +17,10 @@ import { TrainModule } from './train/train.module';
     WeatherModule,
     TrainModule,
     PlacesModule,
-    TravelPlannerModule, // ISSO AQUI É O QUE FALTAVA
+    TravelPlannerModule,
+    PrismaModule,
+    TripModule,
+    ExpenseModule, 
   ],
   controllers: [AppController],
   providers: [AppService],
