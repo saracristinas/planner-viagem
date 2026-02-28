@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get } from '@nestjs/common'
+import { Controller, Post, Body, Get, Param, ParseIntPipe } from '@nestjs/common'
 import { TripService } from './trip.service'
 import { CreateTripDto } from './dto/create-trip.dto'
 
@@ -9,6 +9,11 @@ export class TripController {
   @Post()
   create(@Body() body: CreateTripDto) {
     return this.tripService.create(body)
+  }
+
+  @Get(':id/resumo')
+  getResumo(@Param('id', ParseIntPipe) id: number) {
+    return this.tripService.getResumo(id)
   }
 
   @Get()
