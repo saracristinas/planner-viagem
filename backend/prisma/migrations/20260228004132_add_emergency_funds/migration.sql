@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `Trip` ADD COLUMN `emergencyFund` DOUBLE NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE `User` ADD COLUMN `emergencyFund` DOUBLE NOT NULL DEFAULT 0;
