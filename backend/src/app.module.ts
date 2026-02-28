@@ -9,6 +9,7 @@ import { TrainModule } from './train/train.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { TripModule } from './trip/trip.module';
 import { ExpenseModule } from './expense/expense.module';
+import { AuthModule } from './auth/auth.module';
 
 
 @Module({
@@ -20,7 +21,8 @@ import { ExpenseModule } from './expense/expense.module';
     TravelPlannerModule,
     PrismaModule,
     TripModule,
-    ExpenseModule, 
+    ExpenseModule,
+    AuthModule, 
   ],
   controllers: [AppController],
   providers: [AppService],
