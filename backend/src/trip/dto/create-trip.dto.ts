@@ -17,6 +17,4 @@ export class CreateTripDto {
   @IsNumber()
   budget?: number
 
-  @IsNumber()
-  userId: number
 }
