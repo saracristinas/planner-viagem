@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateExpenseDto } from './dto/create-expense.dto'
+import { ExpenseResponseDto } from './dto/expense-response.dto'
 
 @Injectable()
 export class ExpenseService {
@@ -19,7 +20,7 @@ export class ExpenseService {
       throw new NotFoundException('Viagem não encontrada')
     }
 
-    return await this.prisma.expense.create({
+    const expense = await this.prisma.expense.create({
       data: {
         description: data.description,
         amount: data.amount,
@@ -28,6 +29,8 @@ export class ExpenseService {
         tripId: data.tripId,
       },
     })
+
+    return new ExpenseResponseDto(expense);
   }
 
   async findByTrip(tripId: number, userId: number) {
@@ -43,8 +46,10 @@ export class ExpenseService {
       throw new NotFoundException('Viagem não encontrada')
     }
 
-    return this.prisma.expense.findMany({
+    const expenses = await this.prisma.expense.findMany({
       where: { tripId },
     })
+
+    return expenses.map(expense => new ExpenseResponseDto(expense));
   }
 }

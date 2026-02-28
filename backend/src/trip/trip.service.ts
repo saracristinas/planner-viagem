@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateTripDto } from './dto/create-trip.dto'
 import { Prisma } from '@prisma/client'
+import { TripResponseDto } from './dto/trip-response.dto';
 
 @Injectable()
 export class TripService {
@@ -9,7 +10,7 @@ export class TripService {
 
   async create(data: CreateTripDto, userId: number) {
     try {
-      return await this.prisma.trip.create({
+      const trip = await this.prisma.trip.create({
         data: {
           title: data.title,
           destination: data.destination,
@@ -19,6 +20,8 @@ export class TripService {
           userId,
         },
       });
+
+      return new TripResponseDto(trip);
     } catch (error) {
       throw error;
     }
@@ -269,13 +272,10 @@ export class TripService {
   }
 
   async findAll(userId: number) {
-    return this.prisma.trip.findMany({
-      where: {
-        userId,
-      },
-      include: {
-        expenses: true,
-      },
+    const trips = await this.prisma.trip.findMany({
+      where: { userId },
     });
+
+    return trips.map(trip => new TripResponseDto(trip));
   }
 }
