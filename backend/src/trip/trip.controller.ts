@@ -4,7 +4,7 @@ import { CreateTripDto } from './dto/create-trip.dto'
 
 @Controller('trip')
 export class TripController {
-  constructor(private readonly tripService: TripService) {}
+  constructor(private readonly tripService: TripService) { }
 
   @Post()
   create(@Body() body: CreateTripDto) {
@@ -20,4 +20,10 @@ export class TripController {
   findAll() {
     return this.tripService.findAll()
   }
+
+  @Post(':id/usaremergencia')
+  usarEmergencia(@Param('id', ParseIntPipe) id: number) {
+    return this.tripService.usarEmergencia(id)
+  }
+
 }

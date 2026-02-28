@@ -31,100 +31,200 @@ export class TripService {
     }
   }
 
-async getResumo(tripId: number) {
-  const trip = await this.prisma.trip.findUnique({
-    where: { id: tripId },
-    include: {
-      expenses: true,
-      user: true,
-    },
-  })
+  async getResumo(tripId: number) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      include: {
+        expenses: true,
+        user: true,
+      },
+    })
 
-  if (!trip) {
-    throw new Error('Viagem não encontrada')
+    if (!trip) {
+      throw new Error('Viagem não encontrada')
+    }
+
+    const totalGasto = trip.expenses.reduce(
+      (acc, expense) => acc + expense.amount,
+      0,
+    )
+
+    const gastosPorCategoria = trip.expenses.reduce(
+      (acc: Record<string, number>, expense) => {
+        acc[expense.category] =
+          (acc[expense.category] || 0) + expense.amount
+        return acc
+      },
+      {},
+    )
+
+    const budget = trip.budget ?? 0
+    const fundoTrip = trip.emergencyFund
+    const fundoGlobal = trip.user.emergencyFund
+
+    const fundoTotalDisponivel = fundoTrip + fundoGlobal
+    const limiteTotalPossivel = budget + fundoTotalDisponivel
+
+    const saldoRestantePlanejado = budget - totalGasto
+    const saldoRestanteTotal = limiteTotalPossivel - totalGasto
+
+    const percentualUsado =
+      budget > 0
+        ? Number(((totalGasto / budget) * 100).toFixed(2))
+        : 0
+
+    const percentualUsoTotal =
+      limiteTotalPossivel > 0
+        ? Number(
+            ((totalGasto / limiteTotalPossivel) * 100).toFixed(2),
+          )
+        : 0
+
+    const ultrapassouOrcamento = totalGasto > budget
+
+    const valorExcedente = ultrapassouOrcamento
+      ? Number((totalGasto - budget).toFixed(2))
+      : 0
+
+    const aindaPodeCobrirComFundo =
+      valorExcedente <= fundoTotalDisponivel
+
+    let nivelAlerta: 'SEGURO' | 'ATENCAO' | 'CRITICO' = 'SEGURO'
+
+    if (totalGasto > limiteTotalPossivel) {
+      nivelAlerta = 'CRITICO'
+    } else if (ultrapassouOrcamento) {
+      nivelAlerta = 'ATENCAO'
+    }
+
+    let recomendacao = 'Orçamento sob controle.'
+
+    if (totalGasto > limiteTotalPossivel) {
+      recomendacao =
+        'Você ultrapassou inclusive o fundo de emergência disponível.'
+    } else if (ultrapassouOrcamento && aindaPodeCobrirComFundo) {
+      recomendacao =
+        'Você ultrapassou o orçamento planejado. Pode optar por usar fundo de emergência.'
+    } else if (percentualUsado >= 80) {
+      recomendacao =
+        'Atenção: você já utilizou mais de 80% do orçamento.'
+    }
+
+    let statusFinanceiroFinal:
+      | 'ESTAVEL'
+      | 'USANDO_EMERGENCIA'
+      | 'INSUSTENTAVEL' = 'ESTAVEL'
+
+    if (totalGasto > limiteTotalPossivel) {
+      statusFinanceiroFinal = 'INSUSTENTAVEL'
+    } else if (ultrapassouOrcamento) {
+      statusFinanceiroFinal = 'USANDO_EMERGENCIA'
+    }
+
+    return {
+      tripId: trip.id,
+      title: trip.title,
+
+      // Planejamento
+      budget,
+      percentualUsado,
+
+      // Fundos
+      fundoTrip,
+      fundoGlobal,
+      usedEmergencyFund: trip.usedEmergencyFund,
+      fundoTotalDisponivel,
+
+      // Totais
+      totalGasto,
+      limiteTotalPossivel,
+      percentualUsoTotal,
+
+      // Saldos
+      saldoRestantePlanejado,
+      saldoRestanteTotal,
+
+      // Estado
+      ultrapassouOrcamento,
+      valorExcedente,
+      aindaPodeCobrirComFundo,
+      nivelAlerta,
+      statusFinanceiroFinal,
+
+      gastosPorCategoria,
+      recomendacao,
+    }
   }
 
-  const totalGasto = trip.expenses.reduce(
-    (acc, expense) => acc + expense.amount,
-    0,
-  )
+  async usarEmergencia(tripId: number) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      include: {
+        expenses: true,
+        user: true,
+      },
+    })
 
-  const gastosPorCategoria = trip.expenses.reduce(
-    (acc: Record<string, number>, expense) => {
-      acc[expense.category] =
-        (acc[expense.category] || 0) + expense.amount
-      return acc
-    },
-    {},
-  )
+    if (!trip) {
+      throw new Error('Viagem não encontrada')
+    }
 
-  const budget = trip.budget ?? 0
-  const fundoTrip = trip.emergencyFund
-  const fundoGlobal = trip.user.emergencyFund
+    const totalGasto = trip.expenses.reduce(
+      (acc, expense) => acc + expense.amount,
+      0,
+    )
 
-  const fundoTotalDisponivel = fundoTrip + fundoGlobal
-  const limiteTotalPossivel = budget + fundoTotalDisponivel
+    const budget = trip.budget ?? 0
+    const excedente = totalGasto > budget ? totalGasto - budget : 0
 
-  const saldoRestantePlanejado = budget - totalGasto
-  const saldoRestanteTotal = limiteTotalPossivel - totalGasto
+    if (excedente <= 0) {
+      return { message: 'Não há excedente para cobrir.' }
+    }
 
-  const percentualUsado =
-    budget > 0 ? Number(((totalGasto / budget) * 100).toFixed(2)) : 0
+    let restante = excedente
+    let usadoTrip = 0
+    let usadoGlobal = 0
 
-  const ultrapassouOrcamento = totalGasto > budget
+    if (trip.emergencyFund > 0) {
+      usadoTrip = Math.min(trip.emergencyFund, restante)
+      restante -= usadoTrip
+    }
 
-  const valorExcedente = ultrapassouOrcamento
-    ? Number((totalGasto - budget).toFixed(2))
-    : 0
+    if (restante > 0 && trip.user.emergencyFund > 0) {
+      usadoGlobal = Math.min(trip.user.emergencyFund, restante)
+      restante -= usadoGlobal
+    }
 
-  const aindaPodeCobrirComFundo =
-    valorExcedente <= fundoTotalDisponivel
+    if (restante > 0) {
+      return {
+        message: 'Fundo insuficiente.',
+        valorNaoCoberto: restante,
+      }
+    }
 
-  let nivelAlerta: 'SEGURO' | 'ATENCAO' | 'CRITICO' = 'SEGURO'
+    await this.prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        emergencyFund: trip.emergencyFund - usadoTrip,
+        usedEmergencyFund:
+          trip.usedEmergencyFund + usadoTrip,
+      },
+    })
 
-  if (totalGasto > limiteTotalPossivel) {
-    nivelAlerta = 'CRITICO'
-  } else if (ultrapassouOrcamento) {
-    nivelAlerta = 'ATENCAO'
+    await this.prisma.user.update({
+      where: { id: trip.user.id },
+      data: {
+        emergencyFund:
+          trip.user.emergencyFund - usadoGlobal,
+      },
+    })
+
+    return {
+      message: 'Fundo utilizado com sucesso.',
+      usadoDaTrip: usadoTrip,
+      usadoDoGlobal: usadoGlobal,
+    }
   }
-
-  let recomendacao = 'Orçamento sob controle.'
-
-  if (totalGasto > limiteTotalPossivel) {
-    recomendacao =
-      'Você ultrapassou inclusive o fundo de emergência disponível.'
-  } else if (ultrapassouOrcamento && aindaPodeCobrirComFundo) {
-    recomendacao =
-      'Você ultrapassou o orçamento planejado. Pode optar por usar fundo de emergência.'
-  } else if (percentualUsado >= 80) {
-    recomendacao =
-      'Atenção: você já utilizou mais de 80% do orçamento.'
-  }
-
-  return {
-    tripId: trip.id,
-    title: trip.title,
-
-    budget,
-    fundoTrip,
-    fundoGlobal,
-    fundoTotalDisponivel,
-    limiteTotalPossivel,
-
-    totalGasto,
-    saldoRestantePlanejado,
-    saldoRestanteTotal,
-
-    percentualUsado,
-    ultrapassouOrcamento,
-    valorExcedente,
-    aindaPodeCobrirComFundo,
-
-    nivelAlerta,
-    gastosPorCategoria,
-    recomendacao,
-  }
-}
 
   async findAll() {
     return this.prisma.trip.findMany({
