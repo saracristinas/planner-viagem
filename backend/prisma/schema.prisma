@@ -14,6 +14,7 @@ model User {
   password       String
   emergencyFund  Float    @default(0)
   trips          Trip[]
+  operations     FinancialOperation[]
   createdAt      DateTime @default(now())
 }
 
@@ -29,6 +30,7 @@ model Trip {
   userId             Int
   user               User     @relation(fields: [userId], references: [id])
   expenses           Expense[]
+  operations         FinancialOperation[]
   createdAt          DateTime @default(now())
 }
 
@@ -40,4 +42,18 @@ model Expense {
   date      DateTime
   tripId    Int
   trip      Trip     @relation(fields: [tripId], references: [id])
+}
+
+model FinancialOperation {
+  id            Int      @id @default(autoincrement())
+  type          String   // EMERGENCY_USAGE
+  tripId        Int
+  userId        Int
+  amountTrip    Float    @default(0)
+  amountGlobal  Float    @default(0)
+  totalAmount   Float
+  createdAt     DateTime @default(now())
+
+  trip          Trip     @relation(fields: [tripId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
 }
